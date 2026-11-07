@@ -1,4 +1,5 @@
 import os
+import html
 import datetime as dt
 import requests
 import yfinance as yf
@@ -15,34 +16,45 @@ TICKERS = [
     "SILEX.ST", "SOUN", "TTWO", "TSLA", "VRT", "VER.ST", "XPEV",
 ]
 
-# Nyheter som innehåller dessa ord skickas till dig
+# ---- Inställningar du kan ändra ----
+DAGAR_INNAN_RAPPORT = 3      # påminn om rapport/utdelning så här många dagar innan
+RORELSE_PROCENT = 8          # visa bara dagsrörelser större än detta
+RSI_KOP = 28                 # under detta = möjligt köpläge
+RSI_SALJ = 75                # över detta = möjligt säljläge
+MAX_NYHETER = 8              # max antal nyheter per rapport
+
+# Bara nyheter med dessa ord skickas
 KEYWORDS = [
-    "partner", "partnership", "agreement", "contract", "acquire",
-    "acquisition", "merger", "fda", "approval", "guidance", "upgrade",
-    "downgrade", "offering", "lawsuit", "investigation", "order",
-    "collaboration", "deal", "launch",
+    "partnership", "partners with", "agreement", "contract", "acquire",
+    "acquisition", "merger", "fda", "approval", "guidance", "offering",
+    "lawsuit", "investigation", "collaboration",
 ]
 
 today = dt.date.today()
 
 
+def esc(s):
+    return html.escape(str(s))
+
+
+def fmt(d):
+    return d.strftime("%d/%m")
+
+
 def send(text):
-    # Telegram tillåter max ca 4000 tecken per meddelande
-    for i in range(0, len(text), 3800):
-        requests.post(
-            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            data={"chat_id": CHAT_ID, "text": text[i:i + 3800],
-                  "disable_web_page_preview": True},
-            timeout=30,
-        )
+    requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        data={"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML",
+              "disable_web_page_preview": True},
+        timeout=30,
+    )
 
 
 def rsi(close, n=14):
     delta = close.diff()
     gain = delta.clip(lower=0).ewm(alpha=1 / n, adjust=False).mean()
     loss = (-delta.clip(upper=0)).ewm(alpha=1 / n, adjust=False).mean()
-    rs = gain / loss
-    return 100 - 100 / (1 + rs)
+    return 100 - 100 / (1 + gain / loss)
 
 
 def to_date(x):
@@ -53,100 +65,106 @@ def to_date(x):
     return None
 
 
-def check_dates(t):
-    """Rapportdatum och utdelning inom 7 dagar."""
-    out = []
-    try:
-        cal = yf.Ticker(t).calendar or {}
-    except Exception:
-        return out
-    for d in cal.get("Earnings Date", []) or []:
-        d = to_date(d)
-        if d and 0 <= (d - today).days <= 7:
-            out.append(f"📅 Rapport om {(d - today).days} dagar ({d})")
-            break
-    ex = to_date(cal.get("Ex-Dividend Date"))
-    if ex and 0 <= (ex - today).days <= 7:
-        out.append(f"💰 Utdelning (ex-datum) om {(ex - today).days} dagar ({ex})")
-    return out
-
-
-def check_signals(t):
-    """RSI, glidande medelvärden och stora rörelser."""
-    out = []
-    try:
-        close = yf.Ticker(t).history(period="1y")["Close"].dropna()
-    except Exception:
-        return out
-    if len(close) < 60:
-        return out
-
-    change = (close.iloc[-1] / close.iloc[-2] - 1) * 100
-    if abs(change) >= 7:
-        pil = "🚀" if change > 0 else "🔻"
-        out.append(f"{pil} Rörelse senaste dagen: {change:+.1f}%")
-
-    r = rsi(close).iloc[-1]
-    if r < 30:
-        out.append(f"🟢 Signal: RSI {r:.0f} (översåld, möjligt köpläge)")
-    elif r > 70:
-        out.append(f"🔴 Signal: RSI {r:.0f} (överköpt, möjligt säljläge)")
-
-    if len(close) >= 205:
-        ma50 = close.rolling(50).mean()
-        ma200 = close.rolling(200).mean()
-        diff = ma50 - ma200
-        recent = diff.iloc[-5:]
-        if recent.iloc[0] < 0 < recent.iloc[-1]:
-            out.append("🟢 Signal: Golden cross (50d korsade över 200d)")
-        elif recent.iloc[0] > 0 > recent.iloc[-1]:
-            out.append("🔴 Signal: Death cross (50d korsade under 200d)")
-    return out
-
-
-def check_news(t):
-    """Nyheter om partnerskap, avtal m.m. (endast amerikanska aktier)."""
-    if t.endswith(".ST"):
-        return []
-    out = []
-    try:
-        r = requests.get(
-            "https://finnhub.io/api/v1/company-news",
-            params={"symbol": t, "from": str(today - dt.timedelta(days=1)),
-                    "to": str(today), "token": FINNHUB_KEY},
-            timeout=30,
-        )
-        items = r.json()
-    except Exception:
-        return out
-    if not isinstance(items, list):
-        return out
-    seen = set()
-    for n in items:
-        head = n.get("headline", "")
-        if head in seen:
-            continue
-        if any(k in head.lower() for k in KEYWORDS):
-            seen.add(head)
-            out.append(f"📰 {head}\n{n.get('url', '')}")
-        if len(out) >= 2:
-            break
-    return out
+def short(t):
+    return t.replace(".ST", "")
 
 
 def main():
-    lines = []
-    for t in TICKERS:
-        items = check_dates(t) + check_signals(t) + check_news(t)
-        if items:
-            lines.append(f"━━ {t} ━━\n" + "\n".join(items))
+    rapporter, utdelning, kop, salj, rorelser, kors, nyheter = [], [], [], [], [], [], []
 
-    header = f"📊 Aktierapport {today}\n\n"
-    if lines:
-        send(header + "\n\n".join(lines) +
-             "\n\n⚠️ Signaler är en fingervisning, inte finansiell rådgivning.")
-    else:
-        send(header + "Inga viktiga händelser idag. ✅")
+    # Nyhetsfönster: måndag tittar tillbaka över helgen
+    dagar_tillbaka = 3 if today.weekday() == 0 else 1
+
+    for t in TICKERS:
+        namn = short(t)
+
+        # Rapport och utdelning
+        try:
+            cal = yf.Ticker(t).calendar or {}
+        except Exception:
+            cal = {}
+        for d in cal.get("Earnings Date", []) or []:
+            d = to_date(d)
+            if d and 0 <= (d - today).days <= DAGAR_INNAN_RAPPORT:
+                rapporter.append((d, f"• <b>{namn}</b>: {fmt(d)} ({(d - today).days} dagar)"))
+                break
+        ex = to_date(cal.get("Ex-Dividend Date"))
+        if ex and 0 <= (ex - today).days <= DAGAR_INNAN_RAPPORT:
+            utdelning.append((ex, f"• <b>{namn}</b>: ex-datum {fmt(ex)}"))
+
+        # Signaler
+        try:
+            close = yf.Ticker(t).history(period="1y")["Close"].dropna()
+        except Exception:
+            close = None
+        if close is not None and len(close) > 60:
+            change = (close.iloc[-1] / close.iloc[-2] - 1) * 100
+            if abs(change) >= RORELSE_PROCENT:
+                pil = "📈" if change > 0 else "📉"
+                rorelser.append(f"{pil} <b>{namn}</b> {change:+.1f}%")
+
+            r = rsi(close).iloc[-1]
+            if r < RSI_KOP:
+                kop.append(f"• <b>{namn}</b> (RSI {r:.0f})")
+            elif r > RSI_SALJ:
+                salj.append(f"• <b>{namn}</b> (RSI {r:.0f})")
+
+            if len(close) >= 205:
+                diff = close.rolling(50).mean() - close.rolling(200).mean()
+                rec = diff.iloc[-5:]
+                if rec.iloc[0] < 0 < rec.iloc[-1]:
+                    kors.append(f"🟢 <b>{namn}</b>: golden cross")
+                elif rec.iloc[0] > 0 > rec.iloc[-1]:
+                    kors.append(f"🔴 <b>{namn}</b>: death cross")
+
+        # Nyheter (bara amerikanska aktier), max 1 per aktie
+        if not t.endswith(".ST") and len(nyheter) < MAX_NYHETER:
+            try:
+                items = requests.get(
+                    "https://finnhub.io/api/v1/company-news",
+                    params={"symbol": t,
+                            "from": str(today - dt.timedelta(days=dagar_tillbaka)),
+                            "to": str(today), "token": FINNHUB_KEY},
+                    timeout=30,
+                ).json()
+            except Exception:
+                items = []
+            if isinstance(items, list):
+                for n in items:
+                    head = n.get("headline", "")
+                    if any(k in head.lower() for k in KEYWORDS):
+                        if len(head) > 90:
+                            head = head[:87] + "..."
+                        nyheter.append(
+                            f"• <b>{namn}</b>: {esc(head)} "
+                            f"(<a href=\"{esc(n.get('url', ''))}\">läs</a>)")
+                        break
+
+    # Bygg meddelandet i sektioner
+    sektioner = []
+    if rapporter:
+        sektioner.append("📅 <b>Rapporter på gång</b>\n" +
+                         "\n".join(x[1] for x in sorted(rapporter)))
+    if utdelning:
+        sektioner.append("💰 <b>Utdelning</b>\n" + "\n".join(x[1] for x in sorted(utdelning)))
+    if rorelser:
+        sektioner.append("⚡ <b>Stora rörelser</b>\n" + "\n".join(rorelser))
+    if kop:
+        sektioner.append("🟢 <b>Möjliga köplägen</b>\n" + "\n".join(kop))
+    if salj:
+        sektioner.append("🔴 <b>Möjliga säljlägen</b>\n" + "\n".join(salj))
+    if kors:
+        sektioner.append("📊 <b>Trendskiften</b>\n" + "\n".join(kors))
+    if nyheter:
+        sektioner.append("📰 <b>Nyheter</b>\n" + "\n".join(nyheter))
+
+    # Skicka inget om det inte finns något relevant
+    if not sektioner:
+        return
+
+    text = f"📊 <b>Aktierapport {fmt(today)}</b>\n\n" + "\n\n".join(sektioner)
+    text += "\n\n<i>Signaler är fingervisningar, inte rådgivning.</i>"
+    send(text[:4000])
 
 
 if __name__ == "__main__":
