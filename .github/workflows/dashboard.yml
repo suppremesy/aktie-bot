@@ -2,7 +2,7 @@ name: Uppdatera dashboard
 
 on:
   schedule:
-    - cron: "0 8-21 * * 1-5"   # Varje timme under börsdagar
+    - cron: "*/30 8-21 * * 1-5"   # Varje timme under börsdagar
   workflow_dispatch:
   push:
     branches: [main]
