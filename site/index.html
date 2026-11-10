@@ -6,69 +6,145 @@
 <title>Min aktieassistent</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-:root{--bg:#f4f5f7;--card:#fff;--tx:#14171a;--mut:#6b7280;--up:#16a34a;--dn:#dc2626;--ac:#2563eb;--bd:#e5e7eb}
-@media(prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#171b22;--tx:#e8eaed;--mut:#8b93a1;--up:#4ade80;--dn:#f87171;--ac:#60a5fa;--bd:#262c36}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.3 -apple-system,Segoe UI,Roboto,sans-serif;padding:env(safe-area-inset-top,0) 8px 20px}
-.top{display:flex;justify-content:space-between;align-items:baseline;margin:10px 4px 6px}
-h1{font-size:17px;margin:0}.sub{color:var(--mut);font-size:11px}
-.chips{display:flex;gap:6px;overflow-x:auto;padding:0 0 6px;scrollbar-width:none}
-.chip{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:16px;padding:5px 11px;font-size:13px;white-space:nowrap}
+:root{--bg:#f2f4f8;--card:#fff;--tx:#12151a;--mut:#6b7280;--up:#16a34a;--dn:#dc2626;--ac:#2563eb;--bd:#e6e9ef;--g:#22c55e;--y:#eab308;--b:#3b82f6;--sh:0 1px 3px rgba(0,0,0,.06)}
+@media(prefers-color-scheme:dark){:root{--bg:#0b0e13;--card:#151a22;--tx:#e9ecf1;--mut:#8b94a3;--up:#4ade80;--dn:#f87171;--ac:#60a5fa;--bd:#232a35;--sh:none}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.35 -apple-system,Segoe UI,Roboto,sans-serif;padding:env(safe-area-inset-top,0) 10px calc(76px + env(safe-area-inset-bottom,0))}
+.top{display:flex;justify-content:space-between;align-items:baseline;margin:12px 4px 8px}
+h1{font-size:19px;margin:0}h2{font-size:13px;margin:16px 4px 6px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.sub{color:var(--mut);font-size:11px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;scrollbar-width:none}
+.chip{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:16px;padding:5px 12px;font-size:13px;white-space:nowrap}
 .chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
-#list{display:grid;grid-template-columns:1fr;gap:6px}
-@media(min-width:520px){#list{grid-template-columns:1fr 1fr}}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px 10px}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.t{font-weight:700}.n{color:var(--mut);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
-.p{text-align:right;font-weight:600;white-space:nowrap}.up{color:var(--up)}.dn{color:var(--dn)}
-.p small{display:block;font-size:13px}
-.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
-.tag{font-size:11px;padding:2px 7px;border-radius:7px;background:var(--bg)}
+.list{display:grid;grid-template-columns:1fr;gap:7px}
+@media(min-width:560px){.list{grid-template-columns:1fr 1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px 12px;box-shadow:var(--sh)}
+.card[data-k]{cursor:pointer}
+.row{display:flex;align-items:center;gap:10px}
+.l{min-width:58px}.t{font-weight:700;font-size:15px}.n{color:var(--mut);font-size:11px}
+.mid{flex:1;min-width:0;font-size:11.5px;line-height:1.3;color:var(--mut);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.mid.hot{color:var(--tx)}
+.open .mid{-webkit-line-clamp:unset}
+.p{text-align:right;font-weight:600;white-space:nowrap;margin-left:auto}.p small{display:block;font-size:13px}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.tag{font-size:11px;padding:2px 8px;border-radius:8px;background:var(--bg)}
 .kop{color:var(--up)}.salj{color:var(--dn)}
-.big{font-weight:700;font-size:14px;text-align:right}.big span{display:block;font-weight:400;font-size:11px;color:var(--mut)}
-.note{color:var(--mut);font-size:10px;text-align:center;margin-top:12px}
+.more{margin-top:8px;padding-top:8px;border-top:1px solid var(--bd);font-size:13px}
+.more p{margin:0 0 6px}.more a{color:var(--ac);text-decoration:none;font-weight:600}.more .s{color:var(--mut);font-size:11px;margin-left:6px}
+.hero{background:linear-gradient(135deg,var(--ac),#7c3aed);color:#fff;border-radius:16px;padding:14px}
+.hero .big{font-size:24px;font-weight:700}.hero .sm{font-size:12px;opacity:.9}
+.hero .mk{display:flex;gap:14px;margin-top:10px;font-size:13px}
+.item{display:flex;gap:10px;align-items:center;padding:9px 12px;font-size:13px;cursor:pointer}
+.item b{min-width:46px}.item span{flex:1;min-width:0;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick{border-left:5px solid var(--bd)}
+.pick.green{border-left-color:var(--g)}.pick.yellow{border-left-color:var(--y)}.pick.blue{border-left-color:var(--b)}
+.lab{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:8px;margin-left:6px;color:#fff;vertical-align:middle}
+.lab.green{background:var(--g)}.lab.yellow{background:var(--y);color:#222}.lab.blue{background:var(--b)}
+.why{margin:7px 0 0;padding-left:16px;font-size:12.5px;color:var(--mut)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}
+.dot.green{background:var(--g)}.dot.yellow{background:var(--y)}.dot.blue{background:var(--b)}
+.big2{font-weight:700;font-size:15px;text-align:right}.big2 span{display:block;font-weight:400;font-size:11px;color:var(--mut)}
+.empty{color:var(--mut);text-align:center;padding:18px;font-size:13px}
+.note{color:var(--mut);font-size:10px;text-align:center;margin-top:14px}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0))}
+nav button{flex:1;background:none;border:0;color:var(--mut);font-size:11px;padding:4px 0}
+nav button i{display:block;font-style:normal;font-size:20px}
+nav button.on{color:var(--ac);font-weight:600}
 </style>
 </head>
 <body>
-<div class="top"><h1>📊 Min aktieassistent</h1><div class="sub" id="upd">Laddar…</div></div>
-<div class="chips" id="chips"></div>
-<div id="list"></div>
-<div class="note">Signaler är fingervisningar, inte finansiell rådgivning.</div>
+<div class="top"><h1 id="ttl">Hem</h1><div class="sub" id="upd">Laddar…</div></div>
+<div id="main"></div>
+<nav id="nav"></nav>
 <script>
 try{Telegram.WebApp.ready();Telegram.WebApp.expand()}catch(e){}
-const F=[["alla","Alla"],["kop","🟢 Köp"],["salj","🔴 Sälj"],["rapport","📅 Rapporter"],["rorelse","⚡ Rörelser"]];
-let data=[],f="alla";
+const $=i=>document.getElementById(i);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtD=s=>s?s.slice(8)+"/"+s.slice(5,7):"";
 const daysTo=s=>Math.round((new Date(s)-new Date(new Date().toDateString()))/864e5);
-function card(s){
-  const tags=[];
+const sg=v=>(v>=0?"+":"")+v.toFixed(1)+"%";
+const ago=t=>{if(!t)return"";const h=(Date.now()/1e3-t)/3600;return h<1?"nyss":h<24?Math.round(h)+" tim sedan":Math.round(h/24)+" dagar sedan"};
+const TABS=[["hem","🏠","Hem"],["port","📈","Portfölj"],["upp","🔍","Upptäck"],["rap","📅","Rapporter"]];
+const LAB={green:"Starkt köpläge",yellow:"Bra läge",blue:"Bevaka"};
+const F=[["alla","Alla"],["kop","🟢 Köp"],["salj","🔴 Sälj"],["rorelse","⚡ Rörelser"]];
+let D={stocks:[],picks:[],market:[]},tab="hem",f="alla",open=null;
+
+function link(n){return n&&/^https?:/.test(n.u)?`<a href="${esc(n.u)}" target="_blank" rel="noopener">Läs mer ↗</a><span class="s">${esc(n.src)} · ${ago(n.dt)}</span>`:""}
+function more(n,extra){return`<div class="more">${n?`<p>${esc(n.s||n.h)}</p>${link(n)}`:`<p>Ingen färsk nyhet.</p>`}${extra||""}</div>`}
+function price(s,cur){return`<div class="p">${s.price.toLocaleString("sv-SE")} ${cur||"USD"}<small class="${s.change>=0?"up":"dn"}">${sg(s.change)}</small></div>`}
+
+function stockCard(s){
+  const n=s.news,tags=[],o=open===s.t;
   if(s.signal==="kop")tags.push(`<span class="tag kop">🟢 Köpläge · RSI ${s.rsi}</span>`);
   if(s.signal==="salj")tags.push(`<span class="tag salj">🔴 Säljläge · RSI ${s.rsi}</span>`);
-  if(f==="alla"){
-    if(s.earn_days!==null&&s.earn_days<=7)tags.push(`<span class="tag">📅 Rapport ${fmtD(s.earn)} (${s.earn_days===0?"idag":"om "+s.earn_days+" d"})</span>`);
-    if(s.ex&&daysTo(s.ex)<=7)tags.push(`<span class="tag">💰 Ex-utdelning ${fmtD(s.ex)}</span>`);
+  if(s.earn_days!=null&&s.earn_days<=7)tags.push(`<span class="tag">📅 Rapport ${fmtD(s.earn)} (${s.earn_days===0?"idag":"om "+s.earn_days+" d"})</span>`);
+  if(s.ex&&daysTo(s.ex)<=7)tags.push(`<span class="tag">💰 Ex-utdelning ${fmtD(s.ex)}</span>`);
+  return`<div class="card ${o?"open":""}" data-k="${s.t}"><div class="row"><div class="l"><div class="t">${s.t}</div><div class="n">${esc(s.name)}</div></div>
+  <div class="mid ${n&&n.hot?"hot":""}">${n?esc(n.h):""}</div>${price(s,s.cur)}</div>
+  ${tags.length?`<div class="tags">${tags.join("")}</div>`:""}${o?more(n,`<p class="s" style="margin:6px 0 0">RSI ${s.rsi}</p>`):""}</div>`;
+}
+function pickCard(p){
+  const k="p:"+p.t,o=open===k;
+  return`<div class="card pick ${p.color} ${o?"open":""}" data-k="${k}"><div class="row"><div class="l" style="flex:1"><div class="t">${p.t}<span class="lab ${p.color}">${LAB[p.color]}</span></div><div class="n">${esc(p.name)}</div></div>${price(p)}</div>
+  <ul class="why">${p.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>${o?more(p.news):""}</div>`;
+}
+
+function important(){
+  const a=[];
+  D.stocks.forEach(s=>{
+    if(s.earn_days!=null&&s.earn_days<=3)a.push([1,"📅",s.t,`Rapport ${s.earn_days===0?"idag":"om "+s.earn_days+" d"} (${fmtD(s.earn)})`]);
+    if(Math.abs(s.change)>=8)a.push([2,s.change>0?"🚀":"🔻",s.t,sg(s.change)+" idag"]);
+    if(s.signal==="kop")a.push([3,"🟢",s.t,`Möjligt köpläge (RSI ${s.rsi})`]);
+    if(s.signal==="salj")a.push([3,"🔴",s.t,`Möjligt säljläge (RSI ${s.rsi})`]);
+    if(s.news&&s.news.hot)a.push([4,"📰",s.t,s.news.h]);
+  });
+  return a.sort((x,y)=>x[0]-y[0]).slice(0,8);
+}
+function home(){
+  const S=D.stocks,up=S.filter(s=>s.change>0).length,dn=S.length-up;
+  const best=S.reduce((a,b)=>b.change>a.change?b:a,S[0]||{change:0}),worst=S.reduce((a,b)=>b.change<a.change?b:a,S[0]||{change:0});
+  const it=important();
+  return`<div class="hero"><div class="sm">Din portfölj idag</div><div class="big">${up} upp · ${dn} ner</div>
+  <div class="sm">Bäst: ${best.t||"-"} ${best.t?sg(best.change):""} · Sämst: ${worst.t||"-"} ${worst.t?sg(worst.change):""}</div>
+  <div class="mk">${D.market.map(m=>`<span>${m.n} ${sg(m.c)}</span>`).join("")}</div></div>
+  <h2>Viktigt just nu</h2>
+  <div class="list">${it.length?it.map(x=>`<div class="card item" data-go="${x[2]}"><span style="flex:0">${x[1]}</span><b>${x[2]}</b><span>${esc(x[3])}</span></div>`).join(""):`<div class="card empty">Lugnt just nu ✅</div>`}</div>
+  <h2>Toppval att köpa</h2>
+  <div class="list">${D.picks.slice(0,3).map(p=>`<div class="card item" data-tab="upp"><span style="flex:0"><i class="dot ${p.color}"></i></span><b>${p.t}</b><span>Riktkurs ${p.upside>=0?"+":""}${p.upside}% · ${esc(LAB[p.color])}</span></div>`).join("")||`<div class="card empty">Inga tydliga köplägen just nu.</div>`}</div>`;
+}
+function view(){
+  $("ttl").textContent=TABS.find(t=>t[0]===tab)[2];
+  let h="";
+  if(tab==="hem")h=home();
+  else if(tab==="port"){
+    const l=D.stocks.filter(s=>f==="alla"||(f==="kop"&&s.signal==="kop")||(f==="salj"&&s.signal==="salj")||(f==="rorelse"&&Math.abs(s.change)>=5));
+    h=`<div class="chips">${F.map(([k,v])=>`<button class="chip ${k===f?"on":""}" data-f="${k}">${v}</button>`).join("")}</div>
+    <div class="list">${l.length?l.map(stockCard).join(""):`<div class="card empty">Inget just nu.</div>`}</div>`;
+  }else if(tab==="upp"){
+    h=`<div class="sub" style="margin:0 4px 8px"><i class="dot green"></i>Starkt köpläge <i class="dot yellow" style="margin-left:8px"></i>Bra läge <i class="dot blue" style="margin-left:8px"></i>Bevaka · baserat på analytiker, riktkurser, nedgång och nyheter</div>
+    <div class="list">${D.picks.length?D.picks.map(pickCard).join(""):`<div class="card empty">Inga tydliga köplägen just nu.</div>`}</div>`;
+  }else{
+    const l=D.stocks.filter(s=>s.earn).sort((a,b)=>a.earn_days-b.earn_days);
+    h=`<div class="list">${l.map(s=>`<div class="card"><div class="row"><div class="l" style="flex:1"><div class="t">${s.t}</div><div class="n">${esc(s.name)}</div></div><div class="big2">${fmtD(s.earn)}<span>${s.earn_days===0?"idag":"om "+s.earn_days+" dagar"}</span></div></div></div>`).join("")||`<div class="card empty">Inga kommande rapporter hittades.</div>`}</div>`;
   }
-  const right=f==="rapport"
-    ?`<div class="big">${fmtD(s.earn)}<span>${s.earn_days===0?"idag":"om "+s.earn_days+" dagar"}</span></div>`
-    :`<div class="p">${s.price.toLocaleString("sv-SE")} ${s.cur}<small class="${s.change>=0?"up":"dn"}">${s.change>=0?"+":""}${s.change.toFixed(1)}%</small></div>`;
-  return `<div class="card"><div class="row"><div><div class="t">${s.t}</div><div class="n">${s.name}</div></div>${right}</div>${tags.length&&f!=="rapport"?`<div class="tags">${tags.join("")}</div>`:""}</div>`;
+  $("main").innerHTML=h+`<div class="note">Signaler är fingervisningar, inte finansiell rådgivning.</div>`;
+  $("nav").innerHTML=TABS.map(([k,i,n])=>`<button class="${k===tab?"on":""}" data-tab="${k}"><i>${i}</i>${n}</button>`).join("");
 }
-function show(){
-  let l=data.filter(s=>f==="alla"||(f==="kop"&&s.signal==="kop")||(f==="salj"&&s.signal==="salj")||
-    (f==="rapport"&&s.earn)||(f==="rorelse"&&Math.abs(s.change)>=5));
-  if(f==="rapport")l=l.slice().sort((a,b)=>a.earn_days-b.earn_days);
-  document.getElementById("list").innerHTML=l.length?l.map(card).join(""):`<div class="card n">Inget just nu.</div>`;
-}
-function chips(){
-  const c=document.getElementById("chips");
-  c.innerHTML=F.map(([k,v])=>`<button class="chip ${k===f?"on":""}" data-k="${k}">${v}</button>`).join("");
-  c.querySelectorAll("button").forEach(b=>b.onclick=()=>{f=b.dataset.k;chips();show()});
-}
+document.addEventListener("click",e=>{
+  const c=e.target.closest("[data-tab],[data-f],[data-go],[data-k]");
+  if(!c||e.target.closest("a"))return;
+  if(c.dataset.tab){tab=c.dataset.tab;open=null;view();scrollTo(0,0)}
+  else if(c.dataset.f){f=c.dataset.f;view()}
+  else if(c.dataset.go){tab="port";f="alla";open=c.dataset.go;view();const el=document.querySelector(`[data-k="${open}"]`);el&&el.scrollIntoView({block:"center"})}
+  else if(c.dataset.k){open=open===c.dataset.k?null:c.dataset.k;view()}
+});
 fetch("data.json?"+Date.now()).then(r=>r.json()).then(d=>{
-  data=d.stocks.sort((a,b)=>Math.abs(b.change)-Math.abs(a.change));
-  document.getElementById("upd").textContent=new Date(d.updated).toLocaleString("sv-SE",{dateStyle:"short",timeStyle:"short"});
-  chips();show();
-}).catch(()=>{document.getElementById("upd").textContent="Kunde inte ladda data."});
+  D=d;D.stocks.sort((a,b)=>Math.abs(b.change)-Math.abs(a.change));
+  $("upd").textContent=new Date(d.updated).toLocaleString("sv-SE",{dateStyle:"short",timeStyle:"short"});
+  view();
+}).catch(()=>{$("upd").textContent="Kunde inte ladda data."});
+view();
 </script>
 </body>
 </html>
