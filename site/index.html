@@ -51,6 +51,34 @@ nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);b
 nav button{flex:1;background:none;border:0;color:var(--mut);font-size:11px;padding:4px 0}
 nav button i{display:block;font-style:normal;font-size:20px}
 nav button.on{color:var(--ac);font-weight:600}
+
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.hero,.it,.tile,.pc{animation:rise .45s both}
+@media(prefers-reduced-motion:reduce){.hero,.it,.tile,.pc{animation:none}}
+.hero{color:#fff;border-radius:20px;padding:16px;background:linear-gradient(135deg,var(--h1),var(--h2));box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.hero .gr{font-size:13px;opacity:.9;text-transform:capitalize}.hero .gr b{font-size:17px;text-transform:none}
+.hero .num{font-size:44px;font-weight:800;letter-spacing:-1px;line-height:1.1;margin-top:6px}
+.hero .num small{font-size:13px;font-weight:500;opacity:.85;margin-left:6px;letter-spacing:0}
+.hero .mood{font-size:15px;font-weight:600;margin-top:2px}
+.bar{height:8px;border-radius:6px;background:rgba(255,255,255,.3);overflow:hidden;margin:12px 0 5px}
+.bar i{display:block;height:100%;background:#fff;border-radius:6px}
+.hero .ud{font-size:12px;opacity:.95}
+.pills{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.pill{background:rgba(255,255,255,.2);border-radius:12px;padding:4px 10px;font-size:12px}
+.it{display:flex;gap:11px;align-items:center;padding:9px 12px;cursor:pointer}
+.it .ic{flex:0 0 34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+.it .tx{min-width:0;font-size:13px}.it .tx b{display:block;font-size:14px}.it .tx em{font-style:normal;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px}
+.tile{border-radius:12px;padding:8px 6px;color:#fff;font-weight:700;font-size:13px;text-align:center;cursor:pointer}
+.tile small{display:block;font-weight:500;font-size:11px;opacity:.95}
+.car{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.pc{flex:0 0 148px;scroll-snap-align:start;border-radius:16px;padding:12px;color:#fff;cursor:pointer}
+.pc.green{background:linear-gradient(135deg,#16a34a,#4ade80)}
+.pc.yellow{background:linear-gradient(135deg,#ca8a04,#facc15);color:#2a2105}
+.pc.blue{background:linear-gradient(135deg,#2563eb,#60a5fa)}
+.pc .lab{margin:0;background:rgba(255,255,255,.28);color:inherit;display:inline-block}
+.pc .pt{font-size:19px;font-weight:800;margin-top:8px}.pc .pn{font-size:11px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .pu{font-size:26px;font-weight:800;margin-top:6px}.pc .pu span{display:block;font-size:10.5px;font-weight:500;opacity:.9}
 </style>
 </head>
 <body>
@@ -101,17 +129,35 @@ function important(){
   });
   return a.sort((x,y)=>x[0]-y[0]).slice(0,8);
 }
+function greet(){const h=new Date().getHours();return h<5?"God natt 🌙":h<10?"God morgon ☀️":h<18?"Hej 👋":"God kväll 🌆"}
+function countUp(){
+  const el=$("avg");if(!el)return;const v=+el.dataset.v;
+  if(matchMedia("(prefers-reduced-motion:reduce)").matches){el.firstChild.textContent=sg(v);return}
+  let t0=null;const st=t=>{t0=t0||t;const p=Math.min((t-t0)/800,1);el.firstChild.textContent=sg(v*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(st)};requestAnimationFrame(st);
+}
 function home(){
-  const S=D.stocks,up=S.filter(s=>s.change>0).length,dn=S.length-up;
-  const best=S.reduce((a,b)=>b.change>a.change?b:a,S[0]||{change:0}),worst=S.reduce((a,b)=>b.change<a.change?b:a,S[0]||{change:0});
+  const S=D.stocks,n=S.length||1,up=S.filter(s=>s.change>0).length,dn=S.length-up;
+  const avg=S.reduce((a,s)=>a+s.change,0)/n;
+  const mood=avg>=1.5?"Stark dag 🚀":avg>=0?"Lugn uppgång 🌤️":avg>-1.5?"Lite tungt 🌥️":"Tuff dag 🌧️";
+  const g=avg>=0.3?["#16a34a","#0ea5e9"]:avg<=-0.3?["#dc2626","#f97316"]:["#2563eb","#7c3aed"];
+  const date=new Date().toLocaleDateString("sv-SE",{weekday:"long",day:"numeric",month:"long"});
+  const heat=S.slice().sort((a,b)=>b.change-a.change);
+  const col=c=>{const a=Math.abs(c);return a<0.5?"#64748b":`hsl(${c>0?142:0} 62% ${44-Math.min(a/10,1)*14}%)`};
+  const ac=x=>x[1]==="🔻"||x[1]==="🔴"?"#ef4444":x[1]==="🚀"||x[1]==="🟢"?"#22c55e":x[0]===1?"#3b82f6":"#a855f7";
   const it=important();
-  return`<div class="hero"><div class="sm">Din portfölj idag</div><div class="big">${up} upp · ${dn} ner</div>
-  <div class="sm">Bäst: ${best.t||"-"} ${best.t?sg(best.change):""} · Sämst: ${worst.t||"-"} ${worst.t?sg(worst.change):""}</div>
-  <div class="mk">${D.market.map(m=>`<span>${m.n} ${sg(m.c)}</span>`).join("")}</div></div>
+  return`<div class="hero" style="--h1:${g[0]};--h2:${g[1]}">
+  <div class="gr"><b>${greet()}</b> · ${date}</div>
+  <div class="num" id="avg" data-v="${avg.toFixed(2)}"><span>${sg(avg)}</span><small>portföljen idag (snitt)</small></div>
+  <div class="mood">${mood}</div>
+  <div class="bar"><i style="width:${Math.round(up/n*100)}%"></i></div>
+  <div class="ud">${up} upp · ${dn} ner</div>
+  <div class="pills">${D.market.map(m=>`<span class="pill">${m.n} <b>${m.c>=0?"▲":"▼"} ${sg(m.c)}</b></span>`).join("")}</div></div>
   <h2>Viktigt just nu</h2>
-  <div class="list">${it.length?it.map(x=>`<div class="card item" data-go="${x[2]}"><span style="flex:0">${x[1]}</span><b>${x[2]}</b><span>${esc(x[3])}</span></div>`).join(""):`<div class="card empty">Lugnt just nu ✅</div>`}</div>
+  <div class="list">${it.length?it.map((x,i)=>`<div class="card it" data-go="${x[2]}" style="border-left:4px solid ${ac(x)};animation-delay:${i*50}ms"><span class="ic" style="background:${ac(x)}26">${x[1]}</span><div class="tx"><b>${x[2]}</b><em>${esc(x[3])}</em></div></div>`).join(""):`<div class="card empty">Lugnt just nu ✅</div>`}</div>
+  <h2>Dagens rörelser</h2>
+  <div class="heat">${heat.map((s,i)=>`<div class="tile" data-go="${s.t}" style="background:${col(s.change)};animation-delay:${i*15}ms">${s.t}<small>${sg(s.change)}</small></div>`).join("")}</div>
   <h2>Toppval att köpa</h2>
-  <div class="list">${D.picks.slice(0,3).map(p=>`<div class="card item" data-tab="upp"><span style="flex:0"><i class="dot ${p.color}"></i></span><b>${p.t}</b><span>Riktkurs ${p.upside>=0?"+":""}${p.upside}% · ${esc(LAB[p.color])}</span></div>`).join("")||`<div class="card empty">Inga tydliga köplägen just nu.</div>`}</div>`;
+  ${D.picks.length?`<div class="car">${D.picks.map((p,i)=>`<div class="pc ${p.color}" data-tab="upp" style="animation-delay:${i*70}ms"><span class="lab">${LAB[p.color]}</span><div class="pt">${p.t}</div><div class="pn">${esc(p.name)}</div><div class="pu">${p.upside>=0?"+":""}${p.upside}%<span>till riktkurs</span></div></div>`).join("")}</div>`:`<div class="card empty">Inga tydliga köplägen just nu.</div>`}`;
 }
 function view(){
   $("ttl").textContent=TABS.find(t=>t[0]===tab)[2];
@@ -129,6 +175,7 @@ function view(){
     h=`<div class="list">${l.map(s=>`<div class="card"><div class="row"><div class="l" style="flex:1"><div class="t">${s.t}</div><div class="n">${esc(s.name)}</div></div><div class="big2">${fmtD(s.earn)}<span>${s.earn_days===0?"idag":"om "+s.earn_days+" dagar"}</span></div></div></div>`).join("")||`<div class="card empty">Inga kommande rapporter hittades.</div>`}</div>`;
   }
   $("main").innerHTML=h+`<div class="note">Signaler är fingervisningar, inte finansiell rådgivning.</div>`;
+  if(tab==="hem")countUp();
   $("nav").innerHTML=TABS.map(([k,i,n])=>`<button class="${k===tab?"on":""}" data-tab="${k}"><i>${i}</i>${n}</button>`).join("");
 }
 document.addEventListener("click",e=>{
