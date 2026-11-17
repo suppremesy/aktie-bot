@@ -79,6 +79,7 @@ nav button.on{color:var(--ac);font-weight:600}
 .pc .lab{margin:0;background:rgba(255,255,255,.28);color:inherit;display:inline-block}
 .pc .pt{font-size:19px;font-weight:800;margin-top:8px}.pc .pn{font-size:11px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc .pu{font-size:26px;font-weight:800;margin-top:6px}.pc .pu span{display:block;font-size:10.5px;font-weight:500;opacity:.9}
+.p svg{display:block;margin:3px 0 0 auto}.bars .row{margin:5px 0;font-size:13px}.bars .b{height:8px;border-radius:5px;background:var(--ac);min-width:4px}h3{font-size:13px;margin:0 0 6px}
 </style>
 </head>
 <body>
@@ -93,14 +94,35 @@ const fmtD=s=>s?s.slice(8)+"/"+s.slice(5,7):"";
 const daysTo=s=>Math.round((new Date(s)-new Date(new Date().toDateString()))/864e5);
 const sg=v=>(v>=0?"+":"")+v.toFixed(1)+"%";
 const ago=t=>{if(!t)return"";const h=(Date.now()/1e3-t)/3600;return h<1?"nyss":h<24?Math.round(h)+" tim sedan":Math.round(h/24)+" dagar sedan"};
-const TABS=[["hem","🏠","Hem"],["port","📈","Portfölj"],["upp","🔍","Upptäck"],["rap","📅","Rapporter"]];
+const TABS=[["hem","🏠","Hem"],["port","📈","Portfölj"],["upp","🔍","Upptäck"],["rap","📅","Rapporter"],["ana","📊","Analys"]];
 const LAB={green:"Starkt köpläge",yellow:"Bra läge",blue:"Bevaka"};
 const F=[["alla","Alla"],["kop","🟢 Köp"],["salj","🔴 Sälj"],["rorelse","⚡ Rörelser"]];
 let D={stocks:[],picks:[],market:[]},tab="hem",f="alla",open=null;
 
 function link(n){return n&&/^https?:/.test(n.u)?`<a href="${esc(n.u)}" target="_blank" rel="noopener">Läs mer ↗</a><span class="s">${esc(n.src)} · ${ago(n.dt)}</span>`:""}
 function more(n,extra){return`<div class="more">${n?`<p>${esc(n.s||n.h)}</p>${link(n)}`:`<p>Ingen färsk nyhet.</p>`}${extra||""}</div>`}
-function price(s,cur){return`<div class="p">${s.price.toLocaleString("sv-SE")} ${cur||"USD"}<small class="${s.change>=0?"up":"dn"}">${sg(s.change)}</small></div>`}
+function spark(a){if(!a||a.length<3)return"";const mn=Math.min(...a),mx=Math.max(...a),r=mx-mn||1,w=64,h=18;
+const pts=a.map((v,i)=>`${(i/(a.length-1)*w).toFixed(1)},${(h-2-(v-mn)/r*(h-4)).toFixed(1)}`).join(" ");
+return`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="${a[a.length-1]>=a[0]?"var(--up)":"var(--dn)"}" stroke-width="1.6" stroke-linejoin="round"/></svg>`}
+function price(s,cur){return`<div class="p">${s.price.toLocaleString("sv-SE")} ${cur||"USD"}<small class="${s.change>=0?"up":"dn"}">${sg(s.change)}</small>${spark(s.spark)}</div>`}
+function extra(s){const e=s.ext||{},l=[];
+ if(s.m1!=null)l.push(`1 mån ${sg(s.m1)} · 3 mån ${s.m3!=null?sg(s.m3):"-"} · RSI ${s.rsi}`);
+ if(e.beat)l.push(`Rapporter: slog förväntningarna ${e.beat} senaste kvartalen`);
+ if(e.up||e.down)l.push(`Analytiker 30 dagar: ${e.up} höjt / ${e.down} sänkt`);
+ return`<div style="margin-top:6px;font-size:11.5px;color:var(--mut)">${l.join("<br>")}</div>`}
+const LC={green:"Starkt köp",yellow:"Bra läge",blue:"Bevaka"};
+function analys(){
+  const S=D.stocks,T={};S.forEach(s=>T[s.theme]=(T[s.theme]||0)+1);
+  const th=Object.entries(T).sort((a,b)=>b[1]-a[1]),mx=th.length?th[0][1]:1;
+  const avg=k=>S.reduce((a,s)=>a+(s[k]||0),0)/(S.length||1),nq=D.market.find(m=>m.n==="Nasdaq")||{};
+  const vs=(l,v,w)=>`<div class="row" style="margin:4px 0;font-size:13px"><span style="flex:1">${l}</span><b class="${v>=0?"up":"dn"}">${sg(v)}</b><span class="n" style="min-width:90px;text-align:right">Nasdaq ${w!=null?sg(w):"-"}</span></div>`;
+  const top=th[0];
+  return`<h2>Risk – teman i din portfölj</h2><div class="card bars">${th.map(([n,c])=>`<div class="row"><span style="width:130px">${esc(n)}</span><div style="flex:1"><div class="b" style="width:${c/mx*100}%"></div></div><span class="n">${c} st</span></div>`).join("")}
+  ${top?`<div class="n" style="margin-top:6px">${Math.round(top[1]/S.length*100)}% av dina aktier ligger i "${esc(top[0])}" – faller det temat faller en stor del av portföljen samtidigt.</div>`:""}</div>
+  <h2>Portfölj mot Nasdaq</h2><div class="card">${vs("1 månad",avg("m1"),nq.m1)}${vs("3 månader",avg("m3"),nq.m3)}<div class="n" style="margin-top:4px">Snitt av alla dina aktier (lika vikt).</div></div>
+  <h2>Kommande makrodatum</h2><div class="card">${(D.macro||[]).map(m=>`<div class="row" style="margin:4px 0;font-size:13px"><span>🏛️</span><span style="flex:1">${esc(m.n)}</span><b>${fmtD(m.d)}</b></div>`).join("")||`<div class="n">Inga datum inlagda.</div>`}</div>
+  <h2>Facit – hur har rekommendationerna gått?</h2><div class="card">${(D.facit||[]).length?D.facit.map(f=>`<div class="row" style="margin:5px 0;font-size:13px"><span style="flex:1"><i class="dot ${f.c}"></i>${LC[f.c]} efter ${f.h} d <span class="n">(${f.n} st)</span></span><b class="${f.avg>=0?"up":"dn"}">${sg(f.avg)}</b><span class="n" style="min-width:110px;text-align:right">mot Nasdaq ${sg(f.exc)} · ${f.hit}% slog</span></div>`).join(""):`<div class="n">Samlar data. Första facit visas när en rekommendation är 30 dagar gammal.</div>`}</div>`;
+}
 
 function stockCard(s){
   const n=s.news,tags=[],o=open===s.t;
@@ -110,12 +132,12 @@ function stockCard(s){
   if(s.ex&&daysTo(s.ex)<=7)tags.push(`<span class="tag">💰 Ex-utdelning ${fmtD(s.ex)}</span>`);
   return`<div class="card ${o?"open":""}" data-k="${s.t}"><div class="row"><div class="l"><div class="t">${s.t}</div><div class="n">${esc(s.name)}</div></div>
   <div class="mid ${n&&n.hot?"hot":""}">${n?esc(n.h):""}</div>${price(s,s.cur)}</div>
-  ${tags.length?`<div class="tags">${tags.join("")}</div>`:""}${o?more(n,`<p class="s" style="margin:6px 0 0">RSI ${s.rsi}</p>`):""}</div>`;
+  ${tags.length?`<div class="tags">${tags.join("")}</div>`:""}${o?more(n,extra(s)):""}</div>`;
 }
 function pickCard(p){
   const k="p:"+p.t,o=open===k;
   return`<div class="card pick ${p.color} ${o?"open":""}" data-k="${k}"><div class="row"><div class="l" style="flex:1"><div class="t">${p.t}<span class="lab ${p.color}">${LAB[p.color]}</span></div><div class="n">${esc(p.name)}</div></div>${price(p)}</div>
-  <ul class="why">${p.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>${o?more(p.news):""}</div>`;
+  <ul class="why">${p.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>${o?more(p.news,extra(p)):""}</div>`;
 }
 
 function important(){
@@ -127,6 +149,7 @@ function important(){
     if(s.signal==="salj")a.push([3,"🔴",s.t,`Möjligt säljläge (RSI ${s.rsi})`]);
     if(s.news&&s.news.hot)a.push([4,"📰",s.t,s.news.h]);
   });
+  (D.macro||[]).forEach(m=>{const d=daysTo(m.d);if(d>=0&&d<=3)a.push([1,"🏛️","Makro",`${m.n} ${d===0?"idag":"om "+d+" d"}`])});
   return a.sort((x,y)=>x[0]-y[0]).slice(0,8);
 }
 function greet(){const h=new Date().getHours();return h<5?"God natt 🌙":h<10?"God morgon ☀️":h<18?"Hej 👋":"God kväll 🌆"}
@@ -170,6 +193,7 @@ function view(){
   }else if(tab==="upp"){
     h=`<div class="sub" style="margin:0 4px 8px"><i class="dot green"></i>Starkt köpläge <i class="dot yellow" style="margin-left:8px"></i>Bra läge <i class="dot blue" style="margin-left:8px"></i>Bevaka · baserat på analytiker, riktkurser, nedgång och nyheter</div>
     <div class="list">${D.picks.length?D.picks.map(pickCard).join(""):`<div class="card empty">Inga tydliga köplägen just nu.</div>`}</div>`;
+  }else if(tab==="ana"){h=analys();
   }else{
     const l=D.stocks.filter(s=>s.earn).sort((a,b)=>a.earn_days-b.earn_days);
     h=`<div class="list">${l.map(s=>`<div class="card"><div class="row"><div class="l" style="flex:1"><div class="t">${s.t}</div><div class="n">${esc(s.name)}</div></div><div class="big2">${fmtD(s.earn)}<span>${s.earn_days===0?"idag":"om "+s.earn_days+" dagar"}</span></div></div></div>`).join("")||`<div class="card empty">Inga kommande rapporter hittades.</div>`}</div>`;
